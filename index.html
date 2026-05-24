@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>识字画报</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="textbook_data_compact.js"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+                }
+            }
+        }
+    }
+    </script>
+    <style>
+        body { background: linear-gradient(135deg, #FFFBF5 0%, #FFF0E6 50%, #F0F7FF 100%); }
+        .card { background: white; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+        .btn-primary {
+            background: linear-gradient(135deg, #FF6B6B, #ee5a24);
+            color: white; border: none; border-radius: 12px; padding: 12px 32px;
+            font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255,107,107,0.4); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-secondary {
+            background: linear-gradient(135deg, #4ECDC4, #26a69a);
+            color: white; border: none; border-radius: 12px; padding: 12px 32px;
+            font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(78,205,196,0.4); }
+        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .input-field {
+            width: 100%; padding: 12px 16px; border: 2px solid #E8E8E8; border-radius: 10px;
+            font-size: 16px; transition: border-color 0.2s; outline: none; font-family: inherit;
+        }
+        .input-field:focus { border-color: #FF6B6B; }
+        .step-indicator { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+        .step-dot {
+            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;
+            background: #E8E8E8; color: #999; transition: all 0.3s;
+        }
+        .step-dot.active { background: #FF6B6B; color: white; }
+        .step-dot.done { background: #4ECDC4; color: white; }
+        .step-dot.error { background: #FF4757; color: white; }
+        .spinner {
+            width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
+            display: inline-block; vertical-align: middle; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50;
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .modal-content {
+            background: white; border-radius: 20px; padding: 32px; max-width: 520px;
+            width: 100%; max-height: 90vh; overflow-y: auto;
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .prompt-textarea {
+            width: 100%; min-height: 300px; padding: 16px; border: 2px solid #E8E8E8;
+            border-radius: 10px; font-size: 14px; line-height: 1.8; font-family: inherit;
+            resize: vertical; outline: none;
+        }
+        .prompt-textarea:focus { border-color: #4ECDC4; }
+        .result-img { max-width: 100%; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+        .preset-btn {
+            padding: 6px 14px; border-radius: 8px; border: 1.5px solid #E8E8E8;
+            font-size: 13px; cursor: pointer; transition: all 0.2s; background: white;
+        }
+        .preset-btn:hover, .preset-btn.active { border-color: #FF6B6B; color: #FF6B6B; background: #FFF5F5; }
+        .level-btn {
+            flex: 1; padding: 10px 8px; border-radius: 12px; border: 2px solid #E8E8E8;
+            text-align: center; cursor: pointer; transition: all 0.2s; background: white;
+        }
+        .level-btn:hover { border-color: #FFB4B4; }
+        .level-btn.active-beginner { border-color: #4ECDC4; background: #E8FFF9; }
+        .level-btn.active-intermediate { border-color: #FFE66D; background: #FFFDE8; }
+        .level-btn.active-advanced { border-color: #FF6B6B; background: #FFF0F0; }
+        .theme-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;
+            background: #FFF0F0; color: #FF6B6B; border: 1.5px solid #FFB4B4;
+            cursor: default; transition: all 0.2s;
+        }
+        .theme-tag .remove { cursor: pointer; font-size: 16px; opacity: 0.5; }
+        .theme-tag .remove:hover { opacity: 1; }
+        select.input-field { appearance: none; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; padding-right: 36px; }
+
+        /* Card print area */
+        .card-print-area { background: white; border-radius: 16px; padding: 32px; }
+        .char-card {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 2px solid #E8E8E8; border-radius: 12px; padding: 12px 8px; aspect-ratio: 3/4;
+            background: linear-gradient(145deg, #FFFDF7, #FFF8F0);
+            transition: all 0.2s;
+        }
+        .char-card:hover { border-color: #FFB4B4; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .char-card .pinyin { font-size: 16px; color: #FF6B6B; font-weight: 600; margin-bottom: 4px; }
+        .char-card .hanzi { font-size: 48px; font-weight: 900; color: #2D3436; line-height: 1.1; font-family: KaiTi, STKaiti, "Noto Sans SC", serif; }
+        .char-card .example { font-size: 13px; color: #636E72; margin-top: 6px; }
+
+        /* Print styles */
+        @media print {
+            body { background: white !important; }
+            header, .level-btn, .btn-primary, .btn-secondary, .card, #settings-modal, #setup-banner,
+            #mode-theme, #mode-textbook, #theme-mode-section, #textbook-mode-section,
+            #input-section, #prompt-section, #progress-section, .step-indicator { display: none !important; }
+            #card-result-section { display: block !important; padding: 0 !important; margin: 0 !important; }
+            .card-print-area { box-shadow: none !important; border-radius: 0 !important; padding: 8mm !important; }
+            .char-card { border: 1.5px solid #ccc !important; break-inside: avoid; }
+            .char-card .hanzi { font-size: 42px; }
+            main { max-width: 100% !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+    <!-- Header -->
+    <header class="pt-8 pb-4 text-center relative">
+        <div class="absolute top-4 right-4">
+            <button onclick="openSettings()" class="p-2 rounded-full hover:bg-white/60 transition" title="设置">
+                <svg width="24" height="24" fill="none" stroke="#666" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                </svg>
+            </button>
+        </div>
+        <h1 class="text-3xl font-black text-gray-800 mb-1">识字画报</h1>
+        <p class="text-gray-500 text-sm">AI 驱动的儿童识字卡片生成器，让认字变得有趣</p>
+        <p class="text-gray-400 text-xs mt-1">选择主题或课本 → 生成提示词 → AI 绘制精美识字画报</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-2xl mx-auto px-4 space-y-6">
+
+        <!-- Mode Toggle -->
+        <div class="flex gap-2 mb-2">
+            <button id="mode-theme" class="level-btn active-beginner flex-1" onclick="switchMode('theme')" style="padding:8px">
+                <span class="text-sm font-bold">主题模式</span>
+                <span class="text-xs text-gray-400 ml-1">自由发挥</span>
+            </button>
+            <button id="mode-textbook" class="level-btn flex-1" onclick="switchMode('textbook')" style="padding:8px">
+                <span class="text-sm font-bold">课本模式</span>
+                <span class="text-xs text-gray-400 ml-1">同步教材</span>
+            </button>
+        </div>
+
+        <!-- Theme Mode Form -->
+        <section id="theme-mode-section" class="space-y-6">
+        <section id="input-section" class="card p-6 fade-in">
+            <h2 class="text-lg font-bold text-gray-700 mb-1">填写信息</h2>
+            <p class="text-xs text-gray-400 mb-4">输入场景主题（如「超市」），选择难度等级，即可生成识字画报</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">主题 / 场景（可多选，多个主题批量生成）</label>
+                    <div id="theme-tags" class="flex flex-wrap gap-2 mb-2">
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="theme-input" type="text" class="input-field" placeholder="输入主题后回车添加，如：超市、医院、动物园…" maxlength="20" style="flex:1">
+                        <button class="btn-secondary" style="padding:10px 16px; font-size:14px; white-space:nowrap;" onclick="addThemeTag()">+ 添加</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="text-xs text-gray-400 leading-7">热门：</span>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('超市')">超市</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('动物园')">动物园</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('医院')">医院</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('公园')">公园</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('水果店')">水果店</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('学校')">学校</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('农场')">农场</button>
+                        <button class="preset-btn text-xs" onclick="addThemeTag('海洋')">海洋</button>
+                    </div>
+                    <input type="hidden" id="theme-list" value="">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">难度等级</label>
+                    <div class="flex gap-3">
+                        <div class="level-btn active-beginner" data-level="beginner" onclick="selectLevel(this)">
+                            <div class="text-base font-bold" style="color:#4ECDC4;">启蒙级</div>
+                            <div class="text-xs text-gray-400 mt-1">3-5岁 · 5-8个词</div>
+                            <div class="text-xs text-gray-300">超大字 · 有互动</div>
+                        </div>
+                        <div class="level-btn" data-level="intermediate" onclick="selectLevel(this)">
+                            <div class="text-base font-bold" style="color:#E6B800;">进阶级</div>
+                            <div class="text-xs text-gray-400 mt-1">5-7岁 · 10-15个词</div>
+                            <div class="text-xs text-gray-300">含量词组词</div>
+                        </div>
+                        <div class="level-btn" data-level="advanced" onclick="selectLevel(this)">
+                            <div class="text-base font-bold" style="color:#FF6B6B;">提高级</div>
+                            <div class="text-xs text-gray-400 mt-1">7-9岁 · 15-20个词</div>
+                            <div class="text-xs text-gray-300">完整版式</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="difficulty-level" value="beginner">
+                </div>
+                <button id="btn-gen-prompt" class="btn-primary w-full" onclick="generatePrompt()">
+                    生成提示词
+                </button>
+            </div>
+        </section>
+        </section>
+
+        <!-- Textbook Mode Section -->
+        <section id="textbook-mode-section" class="space-y-6 hidden">
+            <section class="card p-6 fade-in">
+                <h2 class="text-lg font-bold text-gray-700 mb-4">选择课本（部编版）</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">年级 / 学期</label>
+                        <select id="tb-grade" class="input-field" onchange="onGradeChange()">
+                        </select>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-gray-600">课文（可多选）</label>
+                            <button class="text-xs text-blue-500 underline" onclick="toggleAllLessons()">全选/取消</button>
+                        </div>
+                        <div id="tb-lesson-list" class="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-xl p-2 space-y-1">
+                        </div>
+                    </div>
+                    <div id="tb-chars-display" class="hidden">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">已选生字（点击可取消选择）</label>
+                        <div id="tb-chars-grid" class="flex flex-wrap gap-2">
+                        </div>
+                    </div>
+                    <div id="tb-ai-options" class="hidden border-t pt-4 mt-2">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">AI 精美生成</label>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">图片模型</label>
+                            <select id="tb-image-model" class="input-field text-sm">
+                                <option value="gpt-image-2-text-to-image">GPT Image 2</option>
+                                <option value="nano-banana-pro">Nano Banana Pro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="btn-tb-generate" class="btn-primary w-full" onclick="generateTextbookCards()" disabled>
+                        生成识字卡
+                    </button>
+                </div>
+            </section>
+        </section>
+
+        <!-- Step 2: Prompt Preview -->
+        <section id="prompt-section" class="card p-6 fade-in hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-gray-700">生成的提示词</h2>
+                <span class="text-xs text-gray-400">可编辑修改</span>
+            </div>
+            <textarea id="prompt-text" class="prompt-textarea"></textarea>
+            <div class="flex gap-4 mt-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">图片模型</label>
+                    <select id="image-model" class="input-field text-sm">
+                        <option value="gpt-image-2-text-to-image">GPT Image 2（质量高，较慢）</option>
+                        <option value="nano-banana-pro">Nano Banana Pro（速度快）</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-4 mt-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">宽高比</label>
+                    <select id="aspect-ratio" class="input-field text-sm">
+                        <option value="3:4" selected>3:4（接近A4竖版）</option>
+                        <option value="2:3">2:3</option>
+                        <option value="4:5">4:5</option>
+                        <option value="1:1">1:1（正方形）</option>
+                        <option value="9:16">9:16（手机屏）</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">分辨率</label>
+                    <select id="resolution" class="input-field text-sm">
+                        <option value="1K">1K</option>
+                        <option value="2K" selected>2K</option>
+                        <option value="4K">4K</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button class="btn-secondary flex-1" onclick="goBack()">返回修改</button>
+                <button id="btn-gen-image" class="btn-primary flex-1" onclick="generateImage()">生成图片</button>
+            </div>
+        </section>
+
+        <!-- Step 3: Progress -->
+        <section id="progress-section" class="card p-6 hidden">
+            <h2 class="text-lg font-bold text-gray-700 mb-2">生成进度</h2>
+            <div class="space-y-0">
+                <div class="step-indicator" id="step-1">
+                    <div class="step-dot" id="step-1-dot">1</div>
+                    <div>
+                        <div class="font-medium text-gray-700 text-sm">生成词汇与提示词</div>
+                        <div class="text-xs text-gray-400" id="step-1-msg">等待中…</div>
+                    </div>
+                </div>
+                <div class="step-indicator" id="step-2">
+                    <div class="step-dot" id="step-2-dot">2</div>
+                    <div>
+                        <div class="font-medium text-gray-700 text-sm">提交图片生成任务</div>
+                        <div class="text-xs text-gray-400" id="step-2-msg">等待中…</div>
+                    </div>
+                </div>
+                <div class="step-indicator" id="step-3">
+                    <div class="step-dot" id="step-3-dot">3</div>
+                    <div>
+                        <div class="font-medium text-gray-700 text-sm">等待图片生成完成</div>
+                        <div class="text-xs text-gray-400" id="step-3-msg">等待中…</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Result -->
+        <section id="result-section" class="card p-6 hidden fade-in">
+            <h2 class="text-lg font-bold text-gray-700 mb-4">生成结果</h2>
+            <div class="text-center">
+                <img id="result-image" class="result-img mx-auto" alt="识字画报">
+            </div>
+            <div class="flex gap-3 mt-4">
+                <a id="download-btn" class="btn-primary text-center flex-1 no-underline" download="识字画报.png">
+                    下载图片
+                </a>
+                <button class="btn-secondary flex-1" onclick="startOver()">重新开始</button>
+            </div>
+        </section>
+
+        <!-- Card Result Section (textbook mode - HTML rendered) -->
+        <section id="card-result-section" class="hidden">
+            <div class="card-print-area" id="card-print-area">
+                <!-- Cards will be rendered here by JS -->
+            </div>
+            <div class="flex gap-3 mt-4 no-print">
+                <button class="btn-primary flex-1" onclick="window.print()">打印 / 保存为 PDF</button>
+                <button class="btn-secondary flex-1" onclick="generateAIForCards()">AI 精美生成</button>
+                <button style="flex:1; background:linear-gradient(135deg,#95E1D3,#6CBCA9); color:white; border:none; border-radius:12px; padding:12px 20px; font-weight:700; font-size:14px; cursor:pointer;" onclick="startOver()">返回</button>
+            </div>
+            <!-- AI result for cards -->
+            <div id="card-ai-result" class="hidden mt-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-3">AI 精美版</h3>
+                <div class="text-center">
+                    <img id="card-ai-image" class="result-img mx-auto" alt="AI识字画报">
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <a id="card-ai-download" class="btn-primary text-center flex-1 no-underline" download="识字画报AI.png">下载 AI 图片</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden" onclick="closeSettingsOutside(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-800">设置</h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- LLM Settings -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 mb-3">LLM 接口设置</h3>
+                <p class="text-xs text-gray-400 mb-3">用于生成词汇和提示词，兼容 OpenAI 格式</p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <button class="preset-btn" onclick="applyPreset('deepseek')">DeepSeek</button>
+                    <button class="preset-btn" onclick="applyPreset('qwen')">通义千问</button>
+                    <button class="preset-btn" onclick="applyPreset('glm')">智谱 GLM</button>
+                    <button class="preset-btn" onclick="applyPreset('moonshot')">Moonshot</button>
+                    <button class="preset-btn" onclick="applyPreset('openai')">OpenAI</button>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">API 地址</label>
+                        <input id="s-llm-url" type="text" class="input-field text-sm" placeholder="https://api.deepseek.com/v1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">API Key</label>
+                        <input id="s-llm-key" type="password" class="input-field text-sm" placeholder="sk-…">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">模型名称</label>
+                        <input id="s-llm-model" type="text" class="input-field text-sm" placeholder="deepseek-chat">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image API Settings -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 mb-3">图片生成接口</h3>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">KIE AI API Key（GPT Image 2）</label>
+                    <input id="s-img-key" type="password" class="input-field text-sm" placeholder="Bearer Token">
+                    <p class="text-xs text-gray-400 mt-1">从 <a href="https://kie.ai/api-key" target="_blank" class="text-blue-500 underline">kie.ai</a> 获取</p>
+                </div>
+            </div>
+
+            <!-- CORS Proxy -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 mb-3">CORS 代理（可选）</h3>
+                <p class="text-xs text-gray-400 mb-2">部署在 GitHub Pages 时，如遇跨域错误可填入代理地址</p>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">代理前缀</label>
+                    <input id="s-cors-proxy" type="text" class="input-field text-sm" placeholder="https://corsproxy.io/?">
+                </div>
+            </div>
+
+            <button class="btn-primary w-full" onclick="saveSettings()">保存设置</button>
+        </div>
+    </div>
+
+    <!-- First-time setup banner -->
+    <div id="setup-banner" class="hidden fixed bottom-0 left-0 right-0 bg-amber-50 border-t border-amber-200 p-4 text-center z-40 fade-in">
+        <p class="text-sm text-amber-800 mb-2">请先配置 API Key 才能使用</p>
+        <button class="btn-primary text-sm py-2 px-6" onclick="openSettings()">前往设置</button>
+    </div>
+
+    <script>
+    // ==================== Config ====================
+    const PRESETS = {
+        deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+        qwen:     { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+        glm:      { url: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+        moonshot: { url: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+        openai:   { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    };
+
+    const IMAGE_API_BASE = 'https://api.kie.ai';
+    const IMAGE_MODEL = 'gpt-image-2-text-to-image';
+    const POLL_INTERVAL = 4000;
+    const MAX_POLL_TIME = 300000;
+
+    // ==================== System Prompt for LLM ====================
+    function getSystemPrompt(level) {
+        const levelConfig = {
+            beginner: {
+                label: '启蒙级（3-5岁）',
+                wordCount: '5-8个',
+                wordRule: '必须优先选择笔画少、结构简单的高频常用字（如：人、口、日、月、水、山、木、花、大、小）。避免笔画超过8画的字。',
+                fontRule: '必须使用楷体（KaiTi），字号超大（汉字≥48pt，拼音≥24pt），笔画加粗，确保幼儿能看清每一笔。',
+                tagStyle: '白底彩色粗边框大卡片，尺寸不小于120×120px，每个标签就是一个醒目的识字卡片。',
+                extra: `# 六、量词与用法示例
+为每个词汇配上一个简单的量词用法，格式：「一 + 量词 + 名词」，如「一个苹果」「一朵花」。
+在标签旁用小字显示这个用法示例。
+
+# 七、互动区（底部）
+在画面底部留出一个互动区域，标题为「找一找」，内容为一个小任务提示，如：
+「请找到画面中的 3 个水果，指一指它们的名字！」
+文字要大、活泼、带小图标装饰。`,
+                totalWords: '5-8个具体名词',
+                section1: '2-3个',
+                section2: '3-4个',
+                section3: '0-1个（尽量减少环境词，聚焦核心物品）',
+            },
+            intermediate: {
+                label: '进阶级（5-7岁）',
+                wordCount: '10-15个',
+                wordRule: '选择该场景下最常见的词汇，可包含中等复杂度的字。人物、物品、设施、环境均要覆盖。',
+                fontRule: '使用楷体或圆体，字号较大（汉字≥36pt，拼音≥18pt），笔画清晰。',
+                tagStyle: '彩色小贴纸风格，白底深色字，带浅色阴影，清晰可读。',
+                extra: `# 六、量词与组词
+为每个词汇配上一组简单的扩展内容：
+- 量词用法：「一 + 量词 + 名词」
+- 一个简单组词：「字 → 常见词语」
+在标签旁用小字显示。
+
+# 七、互动区（底部）
+在画面底部留出一个互动区域，标题为「连一连」，内容提示：
+「把左边的图片和右边的汉字用线连起来吧！」
+左侧画3-4个小图标，右侧写对应的汉字，留出连线空间。`,
+                totalWords: '10-15个具体名词',
+                section1: '3-4个',
+                section2: '5-7个',
+                section3: '2-3个',
+            },
+            advanced: {
+                label: '提高级（7-9岁）',
+                wordCount: '15-20个',
+                wordRule: '不限，选择该场景下最有代表性和学习价值的词汇。',
+                fontRule: '清晰可读的字体，正常大小即可。',
+                tagStyle: '彩色小贴纸风格，白底黑字或深色字，清晰可读。',
+                extra: '',
+                totalWords: '15-20个具体名词',
+                section1: '3-5个',
+                section2: '5-8个',
+                section3: '3-5个',
+            },
+        };
+
+        const c = levelConfig[level] || levelConfig.advanced;
+
+        return `你是儿童识字小报提示词生成专家。
+
+根据用户提供的「主题/场景」和「标题」，生成一份详细的AI绘图提示词。
+当前难度等级：${c.label}
+
+核心要求：
+1. 根据主题，自动推理出该场景下最适合的${c.totalWords}（包含汉字与拼音）。
+2. 选词规则：${c.wordRule}
+3. 词汇必须涵盖：人物、物品、设施、环境。
+4. 将词汇填入下方模板中 {{...}} 的位置。
+5. 只输出填充好的最终提示词，不要输出任何其他内容（不要代码块标记、不要解释说明）。
+
+【提示词模板如下】
+
+请生成一张儿童识字小报《{{主题/场景}}》，竖版 A4，学习小报版式，适合${c.label}儿童认字与看图识物。
+
+# 一、小报标题区（顶部）
+
+**顶部居中大标题**：《{{标题}}》
+* **风格**：十字小报 / 儿童学习报感
+* **文本要求**：大字、醒目、${c.fontRule}
+* **装饰**：周围添加与 {{主题/场景}} 相关的贴纸风装饰，颜色鲜艳
+
+# 二、小报主体（中间主画面）
+
+画面中心是一幅 **卡通插画风的「{{主题/场景}}」场景**：
+* **整体气氛**：明亮、温暖、积极
+* **构图**：物体边界清晰，方便对应文字，不要过于拥挤。每个物体之间留出足够间距，确保标签不重叠。
+
+**场景分区与核心内容**
+1.  **核心区域 A（主要对象）**：表现 {{主题/场景}} 的核心活动。
+2.  **核心区域 B（配套设施）**：展示相关的工具或物品。
+3.  **核心区域 C（环境背景）**：体现环境特征（如墙面、指示牌等）。
+
+**主题人物**
+* **角色**：1 位可爱卡通人物（职业/身份：与 {{主题/场景}} 匹配）。
+* **动作**：正在进行与场景相关的自然互动。
+
+# 三、必画物体与识字清单
+
+**请务必在画面中清晰绘制以下物体，并为其预留贴标签的位置：**
+
+**1. 核心角色与设施：**
+{{列出${c.section1}核心名词，每个词格式：拼音 汉字}}
+
+**2. 常见物品/工具：**
+{{列出${c.section2}常用物品名词，每个词格式：拼音 汉字}}
+
+**3. 环境与装饰：**
+{{列出${c.section3}环境名词，每个词格式：拼音 汉字}}
+
+*(注意：画面中的物体数量不限于此，但以上列表必须作为重点描绘对象)*
+
+# 四、识字标注规则
+
+对上述清单中的物体，贴上中文识字标签：
+* **格式**：三行制（第一行拼音带声调，第二行简体汉字，第三行量词/组词）。
+* **样式**：${c.tagStyle}
+* **排版**：标签靠近对应的物体，不遮挡主体。
+* **字体**：${c.fontRule}
+
+# 五、画风参数
+* **风格**：儿童绘本风 + 识字小报风
+* **色彩**：高饱和、明快、温暖 (High Saturation, Warm Tone)
+* **质量**：8k resolution, high detail, vector illustration style, clean lines.
+${c.extra}`;
+    }
+
+    // ==================== State ====================
+    let settings = {};
+    let currentPollTimer = null;
+    let selectedLevel = 'beginner';
+    let currentMode = 'theme';
+    let selectedChars = new Set();
+    let themeTagsList = [];
+
+    // ==================== Theme Tags ====================
+    const tagColors = ['#FF6B6B','#4ECDC4','#FFE66D','#AA96DA','#95E1D3','#F9CA24','#6C5CE7','#FFB4B4'];
+
+    function addThemeTag(value) {
+        const input = document.getElementById('theme-input');
+        const val = (value || input.value).trim();
+        if (!val || themeTagsList.includes(val)) { input.value = ''; return; }
+        if (themeTagsList.length >= 6) { showToast('最多添加6个主题', 'error'); return; }
+        themeTagsList.push(val);
+        input.value = '';
+        renderThemeTags();
+    }
+
+    function removeThemeTag(idx) {
+        themeTagsList.splice(idx, 1);
+        renderThemeTags();
+    }
+
+    function renderThemeTags() {
+        const container = document.getElementById('theme-tags');
+        container.innerHTML = '';
+        themeTagsList.forEach((tag, i) => {
+            const color = tagColors[i % tagColors.length];
+            const el = document.createElement('span');
+            el.className = 'theme-tag';
+            el.style.background = color + '15';
+            el.style.color = color;
+            el.style.borderColor = color + '60';
+            el.innerHTML = `${tag} <span class="remove" onclick="removeThemeTag(${i})">&times;</span>`;
+            container.appendChild(el);
+        });
+        document.getElementById('theme-list').value = themeTagsList.join(',');
+    }
+
+    // Enter key to add tag
+    document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('theme-input');
+        if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addThemeTag(); } });
+    });
+
+    // ==================== Mode Switch ====================
+    function switchMode(mode) {
+        currentMode = mode;
+        document.getElementById('theme-mode-section').classList.toggle('hidden', mode !== 'theme');
+        document.getElementById('textbook-mode-section').classList.toggle('hidden', mode !== 'textbook');
+        document.getElementById('mode-theme').className = 'level-btn flex-1' + (mode === 'theme' ? ' active-beginner' : '');
+        document.getElementById('mode-textbook').className = 'level-btn flex-1' + (mode === 'textbook' ? ' active-beginner' : '');
+        if (mode === 'textbook') {
+            initTextbookMode();
+        }
+    }
+
+    // ==================== Textbook Mode ====================
+    function initTextbookMode() {
+        if (typeof TEXTBOOK_DATA === 'undefined') return;
+        const gradeSelect = document.getElementById('tb-grade');
+        if (gradeSelect.options.length > 0) return;
+
+        const order = TEXTBOOK_DATA.order || [];
+        for (const num of order) {
+            const g = TEXTBOOK_DATA.grades[num];
+            if (!g) continue;
+            const opt = document.createElement('option');
+            opt.value = num;
+            opt.textContent = g.name;
+            gradeSelect.appendChild(opt);
+        }
+        onGradeChange();
+    }
+
+    let tbCheckedLessons = new Set();
+
+    function onGradeChange() {
+        const gradeSelect = document.getElementById('tb-grade');
+        const num = gradeSelect.value;
+        const list = document.getElementById('tb-lesson-list');
+        list.innerHTML = '';
+        tbCheckedLessons = new Set();
+        selectedChars = new Set();
+
+        if (!TEXTBOOK_DATA || !TEXTBOOK_DATA.grades[num]) return;
+        const lessons = TEXTBOOK_DATA.grades[num].lessons;
+
+        for (const l of lessons) {
+            const preview = l.chars.slice(0, 4).map(c => c.char).join(' ');
+            const suffix = l.chars.length > 4 ? ` … 等${l.chars.length}字` : '';
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition';
+            label.innerHTML = `
+                <input type="checkbox" value="${l.lesson}" onchange="onLessonCheckChange()" class="w-4 h-4 accent-teal-500">
+                <span class="text-sm"><b>第${l.lesson}课</b>：${preview}${suffix}</span>
+            `;
+            list.appendChild(label);
+        }
+
+        document.getElementById('tb-chars-display').classList.add('hidden');
+        document.getElementById('tb-ai-options').classList.add('hidden');
+        updateTbButton();
+    }
+
+    function toggleAllLessons() {
+        const checkboxes = document.querySelectorAll('#tb-lesson-list input[type=checkbox]');
+        const allChecked = [...checkboxes].every(c => c.checked);
+        checkboxes.forEach(c => c.checked = !allChecked);
+        onLessonCheckChange();
+    }
+
+    function onLessonCheckChange() {
+        const gradeSelect = document.getElementById('tb-grade');
+        const num = gradeSelect.value;
+        const lessons = TEXTBOOK_DATA.grades[num].lessons;
+
+        // Collect all checked lesson numbers
+        tbCheckedLessons = new Set();
+        document.querySelectorAll('#tb-lesson-list input[type=checkbox]:checked').forEach(c => {
+            tbCheckedLessons.add(parseInt(c.value));
+        });
+
+        // Collect all chars from checked lessons
+        selectedChars = new Set();
+        const charMap = new Map(); // char -> {pinyin, lessons}
+        for (const l of lessons) {
+            if (!tbCheckedLessons.has(l.lesson)) continue;
+            for (const c of l.chars) {
+                selectedChars.add(c.char);
+                if (!charMap.has(c.char)) {
+                    charMap.set(c.char, { pinyin: c.pinyin, lessons: [l.lesson] });
+                } else {
+                    charMap.get(c.char).lessons.push(l.lesson);
+                }
+            }
+        }
+
+        // Render character grid
+        const grid = document.getElementById('tb-chars-grid');
+        grid.innerHTML = '';
+
+        if (selectedChars.size > 0) {
+            document.getElementById('tb-chars-display').classList.remove('hidden');
+            document.getElementById('tb-ai-options').classList.remove('hidden');
+        } else {
+            document.getElementById('tb-chars-display').classList.add('hidden');
+            document.getElementById('tb-ai-options').classList.add('hidden');
+        }
+
+        // Group chars by lesson for display
+        for (const lessonNum of tbCheckedLessons) {
+            const lesson = lessons.find(l => l.lesson === lessonNum);
+            if (!lesson) continue;
+
+            // Lesson header
+            if (tbCheckedLessons.size > 1) {
+                const header = document.createElement('div');
+                header.className = 'w-full text-xs font-bold text-gray-400 mt-2 mb-1';
+                header.textContent = `— 第${lessonNum}课 —`;
+                grid.appendChild(header);
+            }
+
+            for (const c of lesson.chars) {
+                if (!selectedChars.has(c.char)) continue;
+                const chip = document.createElement('button');
+                chip.className = 'inline-flex flex-col items-center px-3 py-2 rounded-lg border-2 border-teal-300 bg-teal-50 text-center transition-all hover:bg-teal-100';
+                chip.dataset.char = c.char;
+                chip.innerHTML = `<span class="text-xl font-bold text-gray-800">${c.char}</span><span class="text-xs text-gray-500">${c.pinyin}</span>`;
+                chip.onclick = () => toggleChar(chip, c.char);
+                grid.appendChild(chip);
+            }
+        }
+
+        updateTbButton();
+    }
+
+    function toggleChar(el, char) {
+        if (selectedChars.has(char)) {
+            selectedChars.delete(char);
+            el.classList.remove('border-teal-300', 'bg-teal-50');
+            el.classList.add('border-gray-200', 'bg-gray-50', 'opacity-40');
+        } else {
+            selectedChars.add(char);
+            el.classList.remove('border-gray-200', 'bg-gray-50', 'opacity-40');
+            el.classList.add('border-teal-300', 'bg-teal-50');
+        }
+        updateTbButton();
+    }
+
+    function updateTbButton() {
+        const btn = document.getElementById('btn-tb-generate');
+        btn.disabled = selectedChars.size === 0;
+        btn.textContent = selectedChars.size > 0 ? `生成识字卡（${selectedChars.size}个字）` : '请选择生字';
+    }
+
+    async function generateTextbookCards() {
+        const gradeSelect = document.getElementById('tb-grade');
+        const num = gradeSelect.value;
+        const gradeName = TEXTBOOK_DATA.grades[num].name;
+        const lessons = TEXTBOOK_DATA.grades[num].lessons;
+
+        // Collect selected chars from all checked lessons
+        const lessonData = [];
+        const lessonNames = [];
+        for (const lessonNum of tbCheckedLessons) {
+            const lesson = lessons.find(l => l.lesson === lessonNum);
+            if (!lesson) continue;
+            lessonNames.push(`第${lessonNum}课`);
+            const lessonChars = lesson.chars.filter(c => selectedChars.has(c.char));
+            if (lessonChars.length > 0) {
+                lessonData.push({ num: lessonNum, chars: lessonChars });
+            }
+        }
+
+        if (lessonData.length === 0) { showToast('请至少选一个字', 'error'); return; }
+
+        // Store for AI generation (per lesson)
+        currentCardData = { gradeName, lessons: lessonData };
+
+        // Collect all chars for word examples
+        const allChars = lessonData.flatMap(l => l.chars);
+        const seen = new Set();
+        const uniqueChars = [];
+        for (const c of allChars) {
+            if (!seen.has(c.char)) { seen.add(c.char); uniqueChars.push(c); }
+        }
+
+        // Generate word examples using LLM
+        let wordExamples = {};
+        if (settings.llmKey && settings.llmUrl) {
+            try {
+                const charList = uniqueChars.map(c => c.char).join('、');
+                const prompt = `为以下汉字各提供一个最常见的双字组词。只输出 JSON 格式，不要其他内容。
+格式：{"天":"天空","地":"大地"}
+汉字：${charList}`;
+                const resp = await callLlmApi(prompt, '你是一个中文组词助手。只输出 JSON，不要任何其他文字。');
+                const jsonMatch = resp.match(/\{[\s\S]*\}/);
+                if (jsonMatch) wordExamples = JSON.parse(jsonMatch[0]);
+            } catch(e) { /* silently fail */ }
+        }
+
+        // Render HTML cards — one section per lesson
+        const area = document.getElementById('card-print-area');
+        const borderColors = ['#FF6B6B','#4ECDC4','#FFE66D','#AA96DA','#FFB4B4','#95E1D3','#F9CA24','#6C5CE7'];
+        let html = '';
+
+        lessonData.forEach((lesson, li) => {
+            const cardsPerRow = lesson.chars.length <= 8 ? 4 : 5;
+
+            html += `
+                <div style="margin-bottom:32px; ${li > 0 ? 'page-break-before:always;' : ''}">
+                    <div style="text-align:center; margin-bottom:16px;">
+                        <h2 style="font-size:22px; font-weight:900; color:#2D3436; font-family:KaiTi,STKaiti,serif; margin:0;">
+                            ${gradeName} · 第${lesson.num}课
+                        </h2>
+                        <p style="font-size:13px; color:#999; margin-top:4px;">共 ${lesson.chars.length} 个生字</p>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(${cardsPerRow}, 1fr); gap:12px;">
+            `;
+
+            lesson.chars.forEach((c, i) => {
+                const borderColor = borderColors[i % borderColors.length];
+                const example = wordExamples[c.char] || '';
+                html += `
+                    <div class="char-card" style="border-color:${borderColor}40;">
+                        <div class="pinyin" style="color:${borderColor};">${c.pinyin}</div>
+                        <div class="hanzi">${c.char}</div>
+                        ${example ? `<div class="example">→ ${example}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+        });
+
+        area.innerHTML = html;
+
+        // Hide AI result from previous run
+        document.getElementById('card-ai-result')?.classList.add('hidden');
+
+        // Show the card result section
+        ['input-section','prompt-section','progress-section','result-section',
+         'textbook-mode-section','theme-mode-section'].forEach(id => {
+            document.getElementById(id)?.classList.add('hidden');
+        });
+        document.getElementById('card-result-section').classList.remove('hidden');
+    }
+
+    // Store current card data for AI generation
+    let currentCardData = {};
+
+    async function generateAIForCards() {
+        if (!currentCardData.lessons || currentCardData.lessons.length === 0) {
+            showToast('没有选中生字', 'error'); return;
+        }
+        if (!settings.imgKey) { openSettings(); showToast('请先配置图片 API Key', 'error'); return; }
+
+        const model = document.getElementById('tb-image-model').value;
+        const { gradeName, lessons } = currentCardData;
+        const modelName = model === 'gpt-image-2-text-to-image' ? 'GPT Image 2' : 'Nano Banana';
+
+        const aiResultDiv = document.getElementById('card-ai-result');
+        aiResultDiv.classList.remove('hidden');
+        aiResultDiv.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-3">AI 精美版（${modelName}）</h3><div id="ai-lesson-grid" class="space-y-6"></div>`;
+
+        const grid = document.getElementById('ai-lesson-grid');
+
+        for (const lesson of lessons) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'text-center';
+            itemDiv.innerHTML = `<p class="text-sm font-bold text-gray-600 mb-2">第${lesson.num}课 · 生成中…</p><div class="spinner" style="margin:0 auto 12px;"></div>`;
+            grid.appendChild(itemDiv);
+
+            const charList = lesson.chars.map(c => `${c.pinyin} ${c.char}`).join('、');
+            const lessonLabel = `第${lesson.num}课`;
+            const prompt = `识字卡片海报"${gradeName} ${lessonLabel}"，竖版A4。
+儿童绘本插画风格，色彩鲜艳温暖。
+标题"${gradeName} ${lessonLabel}"居中顶部，大字楷体彩色描边。
+中间区域将以下汉字排列成整齐网格，每个字配拼音标注：
+${charList}
+每张识字卡：拼音在上，汉字超大楷体居中，下方一个组词。
+白底圆角卡片带彩色边框，高饱和明快色彩，8k高清。`;
+
+            try {
+                const taskId = await createImageTask(prompt, '3:4', '2K', model);
+                const imageUrl = await pollTaskStatus(taskId);
+                itemDiv.innerHTML = `
+                    <p class="text-sm font-bold text-gray-600 mb-2">第${lesson.num}课</p>
+                    <img src="${imageUrl}" class="result-img mx-auto" alt="${lessonLabel}">
+                    <a href="${imageUrl}" download="识字画报-${lessonLabel}.png" class="inline-block mt-2 text-sm text-blue-500 underline">下载</a>
+                `;
+            } catch(err) {
+                itemDiv.innerHTML = `<p class="text-sm text-red-400">第${lesson.num}课生成失败: ${err.message}</p>`;
+            }
+        }
+    }
+
+    function selectLevel(el) {
+        const level = el.dataset.level;
+        selectedLevel = level;
+        document.getElementById('difficulty-level').value = level;
+        document.querySelectorAll('.level-btn').forEach(b => {
+            b.className = 'level-btn';
+        });
+        const classMap = { beginner: 'active-beginner', intermediate: 'active-intermediate', advanced: 'active-advanced' };
+        el.classList.add(classMap[level]);
+    }
+
+    // ==================== Init ====================
+    function init() {
+        loadSettingsFromStorage();
+        checkSetup();
+    }
+
+    function checkSetup() {
+        const s = settings;
+        const needSetup = !s.llmKey || !s.imgKey;
+        document.getElementById('setup-banner').classList.toggle('hidden', !needSetup);
+    }
+
+    // ==================== Settings ====================
+    // Default settings
+    const DEFAULTS = {
+        llmUrl: 'https://api.deepseek.com/v1',
+        llmKey: 'sk-96bb50790fbf4c6f87198e5d0738a870',
+        llmModel: 'deepseek-chat',
+        imgKey: '42c21299fc3761b75dc72b9e51d4cede',
+        corsProxy: '',
+    };
+
+    function loadSettingsFromStorage() {
+        try {
+            const raw = localStorage.getItem('literacy-poster-settings');
+            if (raw) settings = JSON.parse(raw);
+        } catch(e) {}
+        // Merge with defaults
+        settings = { ...DEFAULTS, ...settings };
+        // populate fields
+        const el = (id) => document.getElementById(id);
+        el('s-llm-url').value = settings.llmUrl || '';
+        el('s-llm-key').value = settings.llmKey || '';
+        el('s-llm-model').value = settings.llmModel || '';
+        el('s-img-key').value = settings.imgKey || '';
+        el('s-cors-proxy').value = settings.corsProxy || '';
+    }
+
+    function saveSettings() {
+        settings = {
+            llmUrl: document.getElementById('s-llm-url').value.trim().replace(/\/+$/, ''),
+            llmKey: document.getElementById('s-llm-key').value.trim(),
+            llmModel: document.getElementById('s-llm-model').value.trim(),
+            imgKey: document.getElementById('s-img-key').value.trim(),
+            corsProxy: document.getElementById('s-cors-proxy').value.trim(),
+        };
+        localStorage.setItem('literacy-poster-settings', JSON.stringify(settings));
+        closeSettings();
+        checkSetup();
+        showToast('设置已保存');
+    }
+
+    function applyPreset(name) {
+        const p = PRESETS[name];
+        if (!p) return;
+        document.getElementById('s-llm-url').value = p.url;
+        document.getElementById('s-llm-model').value = p.model;
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function openSettings() {
+        loadSettingsFromStorage();
+        document.getElementById('settings-modal').classList.remove('hidden');
+    }
+    function closeSettings() {
+        document.getElementById('settings-modal').classList.add('hidden');
+    }
+    function closeSettingsOutside(e) {
+        if (e.target === e.currentTarget) closeSettings();
+    }
+
+    // ==================== Toast ====================
+    function showToast(msg, type = 'info') {
+        const colors = { info: '#4ECDC4', error: '#FF4757', success: '#4ECDC4' };
+        const el = document.createElement('div');
+        el.textContent = msg;
+        Object.assign(el.style, {
+            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+            background: colors[type] || colors.info, color: 'white', padding: '10px 24px',
+            borderRadius: '10px', fontSize: '14px', fontWeight: '600', zIndex: '100',
+            animation: 'fadeIn 0.3s ease-out', fontFamily: '"Noto Sans SC", sans-serif',
+        });
+        document.body.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 2500);
+        setTimeout(() => el.remove(), 3000);
+    }
+
+    // ==================== API Helpers ====================
+    function getProxiedUrl(url) {
+        const proxy = settings.corsProxy;
+        if (proxy) return proxy + encodeURIComponent(url);
+        return url;
+    }
+
+    async function callLlmApi(userMessage, systemPrompt) {
+        const url = getProxiedUrl(settings.llmUrl + '/chat/completions');
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + settings.llmKey,
+            },
+            body: JSON.stringify({
+                model: settings.llmModel,
+                messages: [
+                    { role: 'system', content: systemPrompt || getSystemPrompt('beginner') },
+                    { role: 'user', content: userMessage },
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+            }),
+        });
+        if (!res.ok) {
+            const err = await res.text().catch(() => '');
+            throw new Error(`LLM API 错误 (${res.status}): ${err || res.statusText}`);
+        }
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) throw new Error('LLM 返回内容为空');
+        return content.trim();
+    }
+
+    async function createImageTask(prompt, aspectRatio, resolution, model) {
+        const url = getProxiedUrl(IMAGE_API_BASE + '/api/v1/jobs/createTask');
+        const input = {
+            prompt: prompt,
+            aspect_ratio: aspectRatio,
+            resolution: resolution,
+        };
+        if (model === 'nano-banana-pro') {
+            input.output_format = 'png';
+        }
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + settings.imgKey,
+            },
+            body: JSON.stringify({
+                model: model,
+                input: input,
+            }),
+        });
+        if (!res.ok) {
+            const err = await res.text().catch(() => '');
+            throw new Error(`图片 API 错误 (${res.status}): ${err || res.statusText}`);
+        }
+        const data = await res.json();
+        if (data.code !== 200) throw new Error(data.msg || '创建任务失败');
+        return data.data.taskId;
+    }
+
+    async function queryTask(taskId) {
+        const url = getProxiedUrl(IMAGE_API_BASE + '/api/v1/jobs/recordInfo?taskId=' + encodeURIComponent(taskId));
+        const res = await fetch(url, {
+            headers: { 'Authorization': 'Bearer ' + settings.imgKey },
+        });
+        if (!res.ok) throw new Error(`查询任务失败 (${res.status})`);
+        const data = await res.json();
+        if (data.code !== 200) throw new Error(data.msg || '查询失败');
+        return data.data;
+    }
+
+    function pollTaskStatus(taskId) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            function tick() {
+                if (Date.now() - startTime > MAX_POLL_TIME) {
+                    reject(new Error('等待超时（5分钟），请稍后手动查询'));
+                    return;
+                }
+                queryTask(taskId).then(info => {
+                    if (info.state === 'success') {
+                        const result = JSON.parse(info.resultJson);
+                        const imageUrl = result.resultUrls?.[0];
+                        if (!imageUrl) { reject(new Error('未获取到图片地址')); return; }
+                        resolve(imageUrl);
+                    } else if (info.state === 'fail') {
+                        reject(new Error(info.failMsg || '图片生成失败'));
+                    } else {
+                        updateStep(3, 'active', '正在生成中…');
+                        currentPollTimer = setTimeout(tick, POLL_INTERVAL);
+                    }
+                }).catch(err => {
+                    reject(err);
+                });
+            }
+            tick();
+        });
+    }
+
+    // ==================== UI State ====================
+    function showSection(id) {
+        ['input-section', 'prompt-section', 'progress-section', 'result-section'].forEach(s => {
+            document.getElementById(s).classList.add('hidden');
+        });
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function showSectionAlso(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function updateStep(step, status, msg) {
+        const dot = document.getElementById(`step-${step}-dot`);
+        const msgEl = document.getElementById(`step-${step}-msg`);
+        dot.className = 'step-dot ' + status;
+        if (status === 'active') dot.innerHTML = '<span class="spinner"></span>';
+        else if (status === 'done') dot.innerHTML = '&#10003;';
+        else if (status === 'error') dot.innerHTML = '&#10007;';
+        else dot.textContent = step;
+        if (msg) msgEl.textContent = msg;
+    }
+
+    function resetProgress() {
+        for (let i = 1; i <= 3; i++) {
+            updateStep(i, '', '等待中…');
+        }
+    }
+
+    function setButtonLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        btn.disabled = loading;
+        if (loading) {
+            btn.dataset.origHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner"></span>' + btn.textContent;
+        } else {
+            btn.innerHTML = btn.dataset.origHtml || btn.textContent;
+        }
+    }
+
+    // ==================== Main Flow ====================
+    let themePrompts = []; // Store prompts for batch generation
+
+    async function generatePrompt() {
+        if (themeTagsList.length === 0) { showToast('请添加至少一个主题', 'error'); return; }
+        if (!settings.llmKey || !settings.llmUrl) { openSettings(); showToast('请先配置 LLM API', 'error'); return; }
+
+        const level = selectedLevel;
+        const levelLabels = {
+            beginner: '启蒙级词汇（5-8个）',
+            intermediate: '进阶词汇（10-15个）',
+            advanced: '词汇与提示词',
+        };
+
+        setButtonLoading('btn-gen-prompt', true);
+        resetProgress();
+        showSectionAlso('progress-section');
+        themePrompts = [];
+
+        // Clean up previous batch UI
+        const oldBatch = document.getElementById('batch-prompts-container');
+        if (oldBatch) oldBatch.remove();
+        document.getElementById('prompt-text').style.display = '';
+
+        try {
+            for (let i = 0; i < themeTagsList.length; i++) {
+                const theme = themeTagsList[i];
+                updateStep(1, 'active', `正在生成第 ${i+1}/${themeTagsList.length} 个主题「${theme}」…`);
+
+                const userMsg = `主题/场景：${theme}\n标题：${theme}`;
+                const systemPrompt = getSystemPrompt(level);
+                const prompt = await callLlmApi(userMsg, systemPrompt);
+                themePrompts.push({ theme, prompt });
+            }
+
+            updateStep(1, 'done', `${themeTagsList.length} 个主题全部生成完成`);
+
+            // If only 1 theme, show single prompt editor
+            if (themePrompts.length === 1) {
+                document.getElementById('prompt-text').value = themePrompts[0].prompt;
+                const section = document.getElementById('prompt-section');
+                section.querySelector('h2').textContent = '生成的提示词';
+                showSection('prompt-section');
+            } else {
+                // Multiple themes: show all prompts and batch generate images
+                showBatchPrompts();
+            }
+        } catch(err) {
+            updateStep(1, 'error', err.message);
+            showToast(err.message, 'error');
+            console.error(err);
+        } finally {
+            setButtonLoading('btn-gen-prompt', false);
+        }
+    }
+
+    function showBatchPrompts() {
+        const section = document.getElementById('prompt-section');
+        // Update title
+        section.querySelector('h2').textContent = `${themePrompts.length} 个主题已生成`;
+
+        // Build individual editable prompts
+        let html = '';
+        themePrompts.forEach((item, i) => {
+            html += `
+                <div class="mb-4 p-4 rounded-lg border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-gray-700">主题 ${i+1}：${item.theme}</h3>
+                        <span class="text-xs text-gray-400">可编辑</span>
+                    </div>
+                    <textarea class="prompt-textarea" id="batch-prompt-${i}" style="min-height:200px">${item.prompt}</textarea>
+                </div>
+            `;
+        });
+
+        // Replace the single textarea with multiple ones
+        const textarea = document.getElementById('prompt-text');
+        const wrapper = textarea.parentElement;
+        // Insert batch HTML before the textarea
+        textarea.insertAdjacentHTML('beforebegin', `<div id="batch-prompts-container">${html}</div>`);
+        textarea.style.display = 'none';
+
+        showSection('prompt-section');
+    }
+
+    function goBack() {
+        if (currentMode === 'textbook') {
+            showSection('textbook-mode-section');
+        } else {
+            showSection('input-section');
+        }
+        document.getElementById('prompt-section').classList.add('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        resetProgress();
+    }
+
+    async function generateImage() {
+        if (!settings.imgKey) { openSettings(); showToast('请先配置图片 API Key', 'error'); return; }
+
+        const aspectRatio = document.getElementById('aspect-ratio').value;
+        const resolution = document.getElementById('resolution').value;
+        const model = document.getElementById('image-model').value;
+
+        // Determine prompts to generate
+        let promptsToGen = [];
+        if (themePrompts.length >= 1) {
+            // Use theme prompts (single or batch)
+            themePrompts.forEach((item, i) => {
+                const ta = document.getElementById(`batch-prompt-${i}`);
+                promptsToGen.push({ theme: item.theme, prompt: ta ? ta.value.trim() : item.prompt });
+            });
+        } else {
+            // Fallback: single textarea
+            const prompt = document.getElementById('prompt-text').value.trim();
+            if (!prompt) { showToast('提示词为空', 'error'); return; }
+            promptsToGen.push({ theme: '识字画报', prompt });
+        }
+
+        setButtonLoading('btn-gen-image', true);
+        showSectionAlso('progress-section');
+        resetProgress();
+        updateStep(1, 'done', `${promptsToGen.length} 个提示词已生成`);
+
+        // Generate images one by one
+        updateStep(2, 'active', `正在提交 ${promptsToGen.length} 个任务…`);
+
+        const results = [];
+        try {
+            for (let i = 0; i < promptsToGen.length; i++) {
+                const item = promptsToGen[i];
+                updateStep(2, 'active', `提交任务 ${i+1}/${promptsToGen.length}：「${item.theme}」…`);
+
+                const taskId = await createImageTask(item.prompt, aspectRatio, resolution, model);
+
+                updateStep(3, 'active', `等待「${item.theme}」生成 (${i+1}/${promptsToGen.length})…`);
+                const imageUrl = await pollTaskStatus(taskId);
+
+                results.push({ theme: item.theme, url: imageUrl });
+            }
+
+            updateStep(2, 'done', `${results.length} 个任务全部完成`);
+            updateStep(3, 'done', '全部图片生成完成！');
+
+            // Show results
+            if (results.length === 1) {
+                document.getElementById('result-image').src = results[0].url;
+                document.getElementById('download-btn').href = results[0].url;
+                showSection('result-section');
+            } else {
+                // Multiple results
+                const section = document.getElementById('result-section');
+                const container = section.querySelector('.text-center');
+                container.innerHTML = '';
+                results.forEach((r, i) => {
+                    container.innerHTML += `
+                        <div class="mb-6">
+                            <p class="text-sm font-bold text-gray-600 mb-2">${i+1}. ${r.theme}</p>
+                            <img src="${r.url}" class="result-img mx-auto mb-2" alt="${r.theme}">
+                            <a href="${r.url}" download="识字画报-${r.theme}.png" class="inline-block text-sm text-blue-500 underline">下载</a>
+                        </div>
+                    `;
+                });
+                section.classList.remove('hidden');
+            }
+            showToast(`${results.length} 张图片生成成功！`, 'success');
+        } catch(err) {
+            const step2Status = document.getElementById('step-2-dot').className;
+            if (step2Status.includes('active')) {
+                updateStep(2, 'error', err.message);
+            } else {
+                updateStep(3, 'error', err.message);
+            }
+            showToast(err.message, 'error');
+            console.error(err);
+        } finally {
+            setButtonLoading('btn-gen-image', false);
+        }
+    }
+
+    function startOver() {
+        if (currentPollTimer) clearTimeout(currentPollTimer);
+        // Reset result image to default state
+        const resultImg = document.getElementById('result-image');
+        if (resultImg) resultImg.src = '';
+        // Hide all result sections
+        ['prompt-section','progress-section','result-section','card-result-section'].forEach(id => {
+            document.getElementById(id)?.classList.add('hidden');
+        });
+        // Show the form for current mode
+        if (currentMode === 'theme') {
+            document.getElementById('theme-mode-section').classList.remove('hidden');
+        } else {
+            document.getElementById('textbook-mode-section').classList.remove('hidden');
+        }
+        resetProgress();
+    }
+
+    // ==================== Boot ====================
+    init();
+    </script>
+</body>
+</html>

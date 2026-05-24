@@ -1,0 +1,16 @@
+# Textbooks (copyrighted)
+小学部编版语文课本/
+
+# Generated images cache
+图片生成/
+
+# API docs (not needed for deployment)
+api-GPT-2.md
+api-nano banana.md
+prd.md
+
+# Raw data (compact version is used)
+textbook_data.json
+
+# OS files
+.DS_Store
